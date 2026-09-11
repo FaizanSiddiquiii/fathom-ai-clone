@@ -19,7 +19,7 @@ function App() {
   return (
     <div className="flex flex-col min-h-screen bg-fathom-bg text-fathom-text-primary">
       {!hideNavAndFooter && <Navbar />}
-      <main className="flex-1 w-full flex flex-col">
+      <main className="flex-1 w-full flex flex-col overflow-x-hidden">
           <Routes>
             <Route path="/" element={<Home />} />
             <Route path="/pricing" element={<Pricing />} />
