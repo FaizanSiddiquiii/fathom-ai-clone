@@ -1,0 +1,111 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
+
+  --color-fathom-yellow: #4dd0e1;
+  --color-fathom-purple: #00509E;
+  --color-fathom-pink: #00b4f0;
+  --color-fathom-orange: #0082c8;
+  --color-fathom-cyan: #00b4f0;
+  --color-fathom-blue: #0073a8;
+  
+  --color-fathom-bg: #000000;
+  --color-fathom-surface: #0a0a0a;
+  --color-fathom-border: #262626;
+  
+  --color-fathom-text-primary: #FFFFFF;
+  --color-fathom-text-secondary: #a1a1aa;
+
+  --animate-scroll: scroll 30s linear infinite;
+
+  @keyframes scroll {
+    to {
+      transform: translateX(calc(-50% - 1rem));
+    }
+  }
+}
+
+@layer base {
+  :root {
+    color-scheme: dark;
+  }
+  
+  body {
+    @apply bg-fathom-bg text-fathom-text-primary font-sans antialiased;
+  }
+}
+
+@layer utilities {
+  .glass-panel {
+    @apply bg-white/5 backdrop-blur-xl border border-white/10;
+  }
+  
+  .gradient-border-yellow-purple {
+    position: relative;
+    border: 1px solid transparent;
+    background: linear-gradient(#0a0a0a, #0a0a0a) padding-box,
+                linear-gradient(90deg, #00b4f0, #0073a8) border-box;
+  }
+  
+  .gradient-border-purple-pink {
+    position: relative;
+    border: 1px solid transparent;
+    background: linear-gradient(#0a0a0a, #0a0a0a) padding-box,
+                linear-gradient(90deg, #00509E, #0073a8) border-box;
+  }
+  
+  .gradient-border-pink-orange {
+    position: relative;
+    border: 1px solid transparent;
+    background: linear-gradient(#0a0a0a, #0a0a0a) padding-box,
+                linear-gradient(90deg, #0073a8, #00b4f0) border-box;
+  }
+
+  .gradient-border-multi {
+    position: relative;
+    border: 1px solid transparent;
+    background: linear-gradient(#0a0a0a, #0a0a0a) padding-box,
+                linear-gradient(90deg, #00b4f0 0%, #0073a8 34.13%, #00509E 66.83%, #00b4f0 100%) border-box;
+  }
+  
+  .button-gradient {
+    position: relative;
+    overflow: hidden;
+    z-index: 1;
+    @apply transition-transform duration-300;
+  }
+  
+  .button-gradient::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 200%;
+    height: 100%;
+    background: linear-gradient(90deg, #00b4f0, #0073a8, #00509E, #00b4f0);
+    z-index: -1;
+    transition: transform 0.5s ease;
+  }
+  
+  .button-gradient:hover::before {
+    transform: translateX(50%);
+  }
+
+  .starfield-bg {
+    background-image: 
+      radial-gradient(1px 1px at 20px 30px, #ffffff, rgba(0,0,0,0)),
+      radial-gradient(1px 1px at 40px 70px, #ffffff, rgba(0,0,0,0)),
+      radial-gradient(2px 2px at 90px 40px, #ffffff, rgba(0,0,0,0)),
+      radial-gradient(1px 1px at 130px 80px, #ffffff, rgba(0,0,0,0)),
+      radial-gradient(2px 2px at 160px 120px, #ffffff, rgba(0,0,0,0));
+    background-repeat: repeat;
+    background-size: 200px 200px;
+    animation: stardrift 60s linear infinite;
+  }
+
+  @keyframes stardrift {
+    0% { background-position: 0 0; }
+    100% { background-position: -400px 400px; }
+  }
+}
