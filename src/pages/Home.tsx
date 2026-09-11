@@ -4,6 +4,14 @@ import { ChevronLeft, ChevronRight, Quote } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '../lib/utils';
 
+// --- New Sections ---
+import CaptureModes from '../components/home/CaptureModes';
+import LiveSummary from '../components/home/LiveSummary';
+import AskFathomSection from '../components/home/AskFathomSection';
+import ChatGPTClaudeSection from '../components/home/ChatGPTClaudeSection';
+import IntegrationsEcosystem from '../components/home/IntegrationsEcosystem';
+import FAQSection from '../components/home/FAQSection';
+
 // --- Background Starfield ---
 const Starfield = () => {
   return (
@@ -230,8 +238,26 @@ export default function Home() {
       {/* Main Feature Slider */}
       <FeatureSlider />
 
+      {/* Never miss what matters */}
+      <LiveSummary />
+
+      {/* Capture on your terms */}
+      <CaptureModes />
+
+      {/* Turn every meeting into answers */}
+      <AskFathomSection />
+
+      {/* ChatGPT & Claude */}
+      <ChatGPTClaudeSection />
+
+      {/* Ecosystem */}
+      <IntegrationsEcosystem />
+
       {/* Testimonials */}
       <TestimonialCarousel />
+
+      {/* FAQ */}
+      <FAQSection />
 
       {/* Footer CTA */}
       <section className="py-40 relative z-10 text-center">
