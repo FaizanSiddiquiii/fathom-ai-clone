@@ -1,4 +1,6 @@
+import * as fs from 'fs';
 
+const mockMeetings = `
 export type Highlight = {
   id: string;
   title: string;
@@ -50,7 +52,7 @@ export const mockMeetings: Meeting[] = [
     company: 'Acme Corp',
     platform: 'Zoom',
     recordingState: 'recorded',
-    summary: 'Comprehensive kickoff and product discovery for Acme Corp\'s enterprise rollout. We discussed the timeline, integration with Salesforce and Hubspot, security requirements, and pricing. Emily raised concerns about the pricing model for 500 seats. Security review is pending but the technical team is aligned on the API integration.',
+    summary: 'Comprehensive kickoff and product discovery for Acme Corp\\'s enterprise rollout. We discussed the timeline, integration with Salesforce and Hubspot, security requirements, and pricing. Emily raised concerns about the pricing model for 500 seats. Security review is pending but the technical team is aligned on the API integration.',
     keyPoints: [
       'Acme Corp is looking to deploy to 500 seats by Q1.',
       'Salesforce and Hubspot integrations are hard requirements.',
@@ -67,21 +69,21 @@ export const mockMeetings: Meeting[] = [
       { id: 'h2', title: 'Integration confirmation', time: '00:32:10', note: 'Confirmed we support both Salesforce and Hubspot natively.' }
     ],
     transcript: [
-      { speaker: 'Alex Chen', time: '00:00:00', text: 'Hi everyone, thanks for joining today. Let\'s get started with the kickoff.' },
+      { speaker: 'Alex Chen', time: '00:00:00', text: 'Hi everyone, thanks for joining today. Let\\'s get started with the kickoff.' },
       { speaker: 'Emily Wang (Acme)', time: '00:01:15', text: 'Thanks Alex. We have our core team here today. Our main goal is to understand how we can roll this out to our 500 reps.' },
       { speaker: 'David Kumar', time: '00:03:20', text: 'From a technical perspective, rolling out to 500 seats is straightforward with our SSO integration.' },
       { speaker: 'John Doe (Acme)', time: '00:05:40', text: 'What about integrations? We heavily rely on Salesforce and Hubspot.' },
       { speaker: 'Sarah Miller', time: '00:07:10', text: 'We have native integrations for both. I can send over the API documentation for any custom workflows you might need.' },
       { speaker: 'Alice Smith (Acme)', time: '00:10:05', text: 'We will also need your team to complete our standard security questionnaire before we can proceed.' },
-      { speaker: 'David Kumar', time: '00:11:30', text: 'Not a problem. Send it over and I\'ll have it done by next Friday.' },
-      { speaker: 'Emily Wang (Acme)', time: '00:15:30', text: 'Let\'s talk about pricing. The enterprise tier seems a bit steep when we are looking at 500 seats. Is there room for negotiation?' },
+      { speaker: 'David Kumar', time: '00:11:30', text: 'Not a problem. Send it over and I\\'ll have it done by next Friday.' },
+      { speaker: 'Emily Wang (Acme)', time: '00:15:30', text: 'Let\\'s talk about pricing. The enterprise tier seems a bit steep when we are looking at 500 seats. Is there room for negotiation?' },
       { speaker: 'Alex Chen', time: '00:17:45', text: 'I understand. Let me take that back to our pricing team and get you a custom proposal by this Friday.' },
       { speaker: 'Bob Jones (Acme)', time: '00:25:00', text: 'Can we also get a dedicated success manager for the rollout?' },
       { speaker: 'Alex Chen', time: '00:26:15', text: 'Yes, all enterprise plans come with a dedicated CSM.' },
       { speaker: 'Charlie Brown (Acme)', time: '00:30:00', text: 'How does the transcription accuracy hold up with technical jargon?' },
       { speaker: 'Sarah Miller', time: '00:32:10', text: 'Our models are trained on domain-specific datasets. We also support both Salesforce and Hubspot natively, which helps with entity recognition.' },
-      { speaker: 'Emily Wang (Acme)', time: '00:45:00', text: 'Great. Let\'s regroup next week after we review the pricing and API docs.' },
-      { speaker: 'Alex Chen', time: '00:58:00', text: 'Sounds like a plan. I\'ll follow up with the action items. Thanks everyone!' }
+      { speaker: 'Emily Wang (Acme)', time: '00:45:00', text: 'Great. Let\\'s regroup next week after we review the pricing and API docs.' },
+      { speaker: 'Alex Chen', time: '00:58:00', text: 'Sounds like a plan. I\\'ll follow up with the action items. Thanks everyone!' }
     ]
   },
   {
@@ -237,7 +239,7 @@ export const mockMeetings: Meeting[] = [
     keyPoints: ['Need to highlight the new MRR growth.'],
     actionItems: [],
     highlights: [],
-    transcript: [{ speaker: 'Alex Chen', time: '00:05:00', text: 'Let\'s make sure the MRR chart is on the first slide.' }]
+    transcript: [{ speaker: 'Alex Chen', time: '00:05:00', text: 'Let\\'s make sure the MRR chart is on the first slide.' }]
   },
   {
     id: 'm9',
@@ -261,3 +263,6 @@ export const mockMeetings: Meeting[] = [
 export const getMeetingById = (id: string) => {
   return mockMeetings.find(m => m.id === id);
 };
+`;
+
+fs.writeFileSync('d:\\FaizanPersonal\\YamazakiStudio\\8xTASK\\src\\data\\mockData.ts', mockMeetings);

@@ -55,31 +55,41 @@ export default function AskFathom() {
     setTimeout(() => {
       setIsTyping(false);
       setThinkingPhase('');
-      let responseContent = "I couldn't find specific information about that in your recent meetings.";
-      let citations: { meetingId: string; title: string }[] = [];
-
-      if (text.toLowerCase().includes('q3')) {
-        responseContent = "In the Q3 Product Roadmap Review, the team aligned on making the bot-free capture system the #1 priority for Q3. Engineering is on track, but desktop app stability needs resolution. Marketing will begin the launch sequence on Nov 1st.";
-        citations = [{ meetingId: 'm1', title: 'Q3 Product Roadmap Review' }];
-      } else if (text.toLowerCase().includes('acme') || text.toLowerCase().includes('feedback')) {
-        responseContent = "Emily from Acme Corp shared that their main pain point is manual Salesforce data entry across their 45 reps. She liked the idea of syncing summaries automatically. Budget is a concern but flexible if the ROI is proven.";
-        citations = [{ meetingId: 'm2', title: 'Acme Corp Sales Discovery' }];
-      } else if (text.toLowerCase().includes('sarah')) {
-        responseContent = "Sarah's primary action item from recent meetings is to draft the Q3 launch announcement blog post by Friday.";
-        citations = [{ meetingId: 'm1', title: 'Q3 Product Roadmap Review' }];
-      } else if (text.toLowerCase().includes('budget')) {
-        responseContent = "Budget was discussed in the Acme Corp Sales Discovery. Emily mentioned they have budget constraints, but they are flexible for the right ROI.";
-        citations = [{ meetingId: 'm2', title: 'Acme Corp Sales Discovery' }];
-      }
-
-      const aiMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        role: 'ai',
-        content: responseContent,
-        citations: citations.length > 0 ? citations : undefined
-      };
       
-      setMessages(prev => [...prev, aiMessage]);
+      const q = text.toLowerCase();
+      
+      import('../data/mockData').then(({ mockMeetings }) => {
+        let matchedMeetings = mockMeetings.filter(m => 
+          m.title.toLowerCase().includes(q) || 
+          m.summary.toLowerCase().includes(q) || 
+          m.transcript.some(t => t.text.toLowerCase().includes(q))
+        );
+
+        let responseContent = "I couldn't find specific information about that in your recent meetings.";
+        let citations: { meetingId: string; title: string }[] = [];
+
+        if (matchedMeetings.length > 0) {
+          // simple dynamic logic
+          const topMatch = matchedMeetings[0];
+          responseContent = `Based on your meetings, I found relevant information in "${topMatch.title}".\n\nContext: ${topMatch.summary.substring(0, 150)}...`;
+          
+          if (q.includes('pricing') || q.includes('objection')) {
+             responseContent = "In the Acme Corp Product Discovery meeting, Emily raised concerns about the enterprise tier pricing for 500 seats. Alex agreed to provide a custom proposal by Friday.";
+             citations = [{ meetingId: 'm-large', title: 'Acme Corp — Product Discovery & Enterprise Rollout' }];
+          } else {
+             citations = matchedMeetings.slice(0, 3).map(m => ({ meetingId: m.id, title: m.title }));
+          }
+        }
+
+        const aiMessage: Message = {
+          id: (Date.now() + 1).toString(),
+          role: 'ai',
+          content: responseContent,
+          citations: citations.length > 0 ? citations : undefined
+        };
+        
+        setMessages(prev => [...prev, aiMessage]);
+      });
     }, 2400);
   };
 
