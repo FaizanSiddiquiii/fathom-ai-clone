@@ -68,32 +68,28 @@ export default function AskFathom() {
         let responseContent = "I couldn't find specific information about that in your recent meetings.";
         let citations: { meetingId: string; title: string }[] = [];
 
-        if (matchedMeetings.length > 0) {
-          // simple dynamic logic
-          const topMatch = matchedMeetings[0];
-          responseContent = `Based on your meetings, I found relevant information in "${topMatch.title}".\n\nContext: ${topMatch.summary.substring(0, 150)}...`;
-          
-          if (q.includes('q3 roadmap') || q.includes('decide')) {
-             responseContent = "During the Product Sync, the team decided to push the new analytics dashboard to Q4 in order to prioritize the SSO integration for enterprise clients in Q3. David is updating the Jira epics accordingly.";
-             citations = [{ meetingId: 'm-2', title: 'Product Sync: Q3 Roadmap Planning' }];
-          } else if (q.includes('acme') || q.includes('feedback')) {
-             responseContent = "Acme Corp was generally positive but had two main points of feedback:\n1. They need tighter integrations with Salesforce.\n2. The onboarding process feels a bit manual and they requested more automated templates.\nEmily is drafting a custom proposal to address these.";
-             citations = [{ meetingId: 'm-large', title: 'Acme Corp — Product Discovery & Enterprise Rollout' }];
-          } else if (q.includes('budget') || q.includes('constraint')) {
-             responseContent = "Yes, in the Acme Corp meeting, they mentioned that their Q3 budget is locked, meaning any new enterprise software purchases must be deferred to Q4 or require special CFO approval if it exceeds $50k.";
-             citations = [{ meetingId: 'm-large', title: 'Acme Corp — Product Discovery & Enterprise Rollout' }];
-          } else if (q.includes('sarah') || q.includes('action items')) {
-             responseContent = "Sarah has the following open action items from recent meetings:\n- Send the updated pricing sheet to the Acme Corp procurement team.\n- Schedule a follow-up technical deep dive with Northstar's engineering lead.\n- Finalize the Q3 marketing budget allocation by Thursday.";
-             citations = [
-               { meetingId: 'm-large', title: 'Acme Corp — Product Discovery & Enterprise Rollout' },
-               { meetingId: 'm-3', title: 'Marketing Weekly Sync' }
-             ];
-          } else if (q.includes('pricing') || q.includes('objection')) {
-             responseContent = "In the Acme Corp Product Discovery meeting, Emily raised concerns about the enterprise tier pricing for 500 seats. Alex agreed to provide a custom proposal by Friday.";
-             citations = [{ meetingId: 'm-large', title: 'Acme Corp — Product Discovery & Enterprise Rollout' }];
-          } else {
-             citations = matchedMeetings.slice(0, 3).map(m => ({ meetingId: m.id, title: m.title }));
-          }
+        if (q.includes('q3 roadmap') || q.includes('decide')) {
+           responseContent = "During the Product Sync, the team decided to push the new analytics dashboard to Q4 in order to prioritize the SSO integration for enterprise clients in Q3. David is updating the Jira epics accordingly.";
+           citations = [{ meetingId: 'm-2', title: 'Product Sync: Q3 Roadmap Planning' }];
+        } else if (q.includes('acme') || q.includes('feedback')) {
+           responseContent = "Acme Corp was generally positive but had two main points of feedback:\n1. They need tighter integrations with Salesforce.\n2. The onboarding process feels a bit manual and they requested more automated templates.\nEmily is drafting a custom proposal to address these.";
+           citations = [{ meetingId: 'm-large', title: 'Acme Corp — Product Discovery & Enterprise Rollout' }];
+        } else if (q.includes('budget') || q.includes('constraint')) {
+           responseContent = "Yes, in the Acme Corp meeting, they mentioned that their Q3 budget is locked, meaning any new enterprise software purchases must be deferred to Q4 or require special CFO approval if it exceeds $50k.";
+           citations = [{ meetingId: 'm-large', title: 'Acme Corp — Product Discovery & Enterprise Rollout' }];
+        } else if (q.includes('sarah') || q.includes('action items')) {
+           responseContent = "Sarah has the following open action items from recent meetings:\n- Send the updated pricing sheet to the Acme Corp procurement team.\n- Schedule a follow-up technical deep dive with Northstar's engineering lead.\n- Finalize the Q3 marketing budget allocation by Thursday.";
+           citations = [
+             { meetingId: 'm-large', title: 'Acme Corp — Product Discovery & Enterprise Rollout' },
+             { meetingId: 'm-3', title: 'Marketing Weekly Sync' }
+           ];
+        } else if (q.includes('pricing') || q.includes('objection')) {
+           responseContent = "In the Acme Corp Product Discovery meeting, Emily raised concerns about the enterprise tier pricing for 500 seats. Alex agreed to provide a custom proposal by Friday.";
+           citations = [{ meetingId: 'm-large', title: 'Acme Corp — Product Discovery & Enterprise Rollout' }];
+        } else if (matchedMeetings.length > 0) {
+           const topMatch = matchedMeetings[0];
+           responseContent = `Based on your meetings, I found relevant information in "${topMatch.title}".\n\nContext: ${topMatch.summary.substring(0, 150)}...`;
+           citations = matchedMeetings.slice(0, 3).map(m => ({ meetingId: m.id, title: m.title }));
         }
 
         const aiMessage: Message = {
