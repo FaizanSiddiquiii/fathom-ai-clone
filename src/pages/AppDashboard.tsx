@@ -9,6 +9,17 @@ export default function AppDashboard() {
   const [selectedMeetingId, setSelectedMeetingId] = useState(mockMeetings[0].id);
   const [actionItemsState, setActionItemsState] = useState<Record<string, boolean>>({});
   
+  // Capture Simulation State
+  const [captureState, setCaptureState] = useState<'idle' | 'joining' | 'recording' | 'processing'>('idle');
+  const [captureTarget, setCaptureTarget] = useState<any>(null);
+  const [captureTime, setCaptureTime] = useState(0);
+
+  const upcomingMeetings = [
+    { id: 'u1', title: 'Acme Corp — Product Discovery', participants: ['Alex J.', 'Sam T.'], platform: 'Zoom', time: 'Today · 3:00 PM' },
+    { id: 'u2', title: 'Northstar — Weekly Sync', participants: ['Team'], platform: 'Google Meet', time: 'Today · 4:30 PM' },
+    { id: 'u3', title: 'Vertex — Enterprise Demo', participants: ['Sarah W.', 'Client'], platform: 'Teams', time: 'Tomorrow · 11:00 AM' }
+  ];
+  
   // Search
   const [searchQuery, setSearchQuery] = useState('');
   
@@ -70,6 +81,31 @@ export default function AppDashboard() {
     }
     return () => clearInterval(interval);
   }, [isPlaying, durationSec]);
+
+  // Capture Simulation State Machine
+  useEffect(() => {
+    if (captureState === 'joining') {
+      const t = setTimeout(() => {
+        setCaptureState('recording');
+        setCaptureTime(0);
+      }, 2500);
+      return () => clearTimeout(t);
+    }
+    if (captureState === 'recording') {
+      const i = setInterval(() => {
+        setCaptureTime(c => c + 1);
+      }, 1000);
+      return () => clearInterval(i);
+    }
+    if (captureState === 'processing') {
+      const t = setTimeout(() => {
+        setCaptureState('idle');
+        setSelectedMeetingId(mockMeetings[0].id);
+        setActiveTab('summary');
+      }, 3500);
+      return () => clearTimeout(t);
+    }
+  }, [captureState]);
 
   // Search logic
   const searchResults = useMemo(() => {
@@ -225,26 +261,49 @@ export default function AppDashboard() {
               )}
             </div>
           ) : (
-            mockMeetings.map((meeting) => (
-              <button
-                key={meeting.id}
-                onClick={() => setSelectedMeetingId(meeting.id)}
-                className={cn(
-                  "w-full text-left p-4 border-b border-white/5 hover:bg-white/5 transition-colors block",
-                  selectedMeetingId === meeting.id ? "bg-white/10 border-l-2 border-l-fathom-cyan" : ""
-                )}
-              >
-                <h3 className="text-sm font-semibold text-white mb-1 truncate block w-full">{meeting.title}</h3>
-                <div className="flex items-center text-xs text-white/50 mb-2 gap-2">
-                  <span>{meeting.date}</span>
-                  <span>•</span>
-                  <span>{meeting.type}</span>
+            <div className="flex flex-col h-full">
+              <div className="p-4 border-b border-white/10 shrink-0">
+                <h3 className="text-xs font-semibold text-white/40 uppercase tracking-wider mb-3">Upcoming Meetings</h3>
+                <div className="space-y-2">
+                  {upcomingMeetings.map(um => (
+                    <div key={um.id} className="bg-white/5 border border-white/10 rounded-lg p-3">
+                      <h4 className="text-sm font-semibold text-white truncate mb-1">{um.title}</h4>
+                      <div className="text-xs text-white/50 mb-2">{um.time} • {um.platform}</div>
+                      <button 
+                        onClick={() => { setCaptureTarget(um); setCaptureState('joining'); }}
+                        className="w-full bg-fathom-cyan text-black text-xs font-semibold py-1.5 rounded hover:bg-fathom-cyan/90 transition-colors">
+                        Start Fathom
+                      </button>
+                    </div>
+                  ))}
                 </div>
-                <p className="text-xs text-white/40 truncate w-full block">
-                  {meeting.participants.join(', ')}
-                </p>
-              </button>
-            ))
+              </div>
+              <div className="p-4 flex-1 overflow-y-auto">
+                <h3 className="text-xs font-semibold text-white/40 uppercase tracking-wider mb-3">Past Meetings</h3>
+                <div className="space-y-1 -mx-4">
+                {mockMeetings.map((meeting) => (
+                  <button
+                    key={meeting.id}
+                    onClick={() => setSelectedMeetingId(meeting.id)}
+                    className={cn(
+                      "w-full text-left p-4 border-b border-white/5 hover:bg-white/5 transition-colors block",
+                      selectedMeetingId === meeting.id ? "bg-white/10 border-l-2 border-l-fathom-cyan" : ""
+                    )}
+                  >
+                    <h3 className="text-sm font-semibold text-white mb-1 truncate block w-full">{meeting.title}</h3>
+                    <div className="flex items-center text-xs text-white/50 mb-2 gap-2">
+                      <span>{meeting.date}</span>
+                      <span>•</span>
+                      <span>{meeting.type}</span>
+                    </div>
+                    <p className="text-xs text-white/40 truncate w-full block">
+                      {meeting.participants.join(', ')}
+                    </p>
+                  </button>
+                ))}
+                </div>
+              </div>
+            </div>
           )}
         </div>
       </div>
@@ -596,6 +655,55 @@ export default function AppDashboard() {
                   </label>
                 </div>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Capture Simulation Overlay */}
+      {captureState !== 'idle' && captureTarget && (
+        <div className="fixed inset-0 z-[100] bg-black/90 flex flex-col items-center justify-center p-4 backdrop-blur-sm animate-in fade-in duration-300">
+          <div className="bg-[#1a1a1a] border border-white/10 rounded-2xl w-full max-w-lg overflow-hidden shadow-2xl animate-in zoom-in-95 duration-300 delay-100">
+            <div className="p-6 text-center border-b border-white/10">
+              <h2 className="text-xl font-bold text-white mb-2">{captureTarget.title}</h2>
+              <div className="text-sm text-white/60 flex items-center justify-center gap-2">
+                 <Video className="w-4 h-4"/> {captureTarget.platform} • {captureTarget.participants.join(', ')}
+              </div>
+            </div>
+            
+            <div className="p-10 flex flex-col items-center justify-center min-h-[250px]">
+              {captureState === 'joining' && (
+                <>
+                  <div className="w-12 h-12 border-4 border-fathom-cyan/20 border-t-fathom-cyan rounded-full animate-spin mb-6"></div>
+                  <h3 className="text-xl font-medium text-white mb-2">Joining meeting...</h3>
+                  <p className="text-sm text-white/50">Fathom bot is connecting to {captureTarget.platform}</p>
+                </>
+              )}
+              
+              {captureState === 'recording' && (
+                <>
+                  <div className="relative mb-6">
+                    <div className="w-4 h-4 bg-red-500 rounded-full animate-pulse"></div>
+                    <div className="absolute inset-0 bg-red-500 rounded-full animate-ping opacity-50"></div>
+                  </div>
+                  <h3 className="text-xl font-medium text-white mb-2">Recording</h3>
+                  <div className="text-4xl font-mono text-white/90 font-light mb-8 tracking-wider">{formatTime(captureTime)}</div>
+                  <button onClick={() => setCaptureState('processing')} className="bg-red-500/10 text-red-500 border border-red-500/20 hover:bg-red-500/20 px-6 py-2 rounded-full text-sm font-semibold transition-colors">
+                    End Recording
+                  </button>
+                </>
+              )}
+              
+              {captureState === 'processing' && (
+                <>
+                  <div className="w-12 h-12 border-4 border-fathom-purple/20 border-t-fathom-purple rounded-full animate-spin mb-6"></div>
+                  <h3 className="text-xl font-medium text-white mb-2">Processing meeting...</h3>
+                  <p className="text-sm text-white/50 mb-6">Generating transcript, summary, and action items.</p>
+                  <div className="w-full max-w-[200px] bg-white/5 h-2 rounded-full overflow-hidden">
+                     <div className="h-full bg-fathom-purple w-full origin-left animate-[pulse_2s_ease-in-out_infinite]"></div>
+                  </div>
+                </>
+              )}
             </div>
           </div>
         </div>
