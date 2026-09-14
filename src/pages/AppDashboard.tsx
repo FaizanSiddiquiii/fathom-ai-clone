@@ -1,24 +1,33 @@
 import { useState, useEffect, useMemo } from 'react';
-import { mockMeetings } from '../data/mockData';
-import { Search, Folder, MessageSquare, ListTodo, Video, CheckCircle2, Circle, Clock, Plus, Settings, LogOut, Share2, Play, Pause, Volume2, FastForward, Edit3, X, ChevronDown } from 'lucide-react';
+import { Search, Folder, MessageSquare, ListTodo, Video, CheckCircle2, Circle, Clock, Plus, Settings, LogOut, Share2, Play, Pause, Volume2, FastForward, Edit3, X, ChevronDown, Calendar, Scissors, LinkIcon } from 'lucide-react';
 import { cn } from '../lib/utils';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
+import { useMeetingStore } from '../lib/store';
+import { getTemplateForUpcoming } from '../data/captureTemplates';
 
 export default function AppDashboard() {
+  const navigate = useNavigate();
+  const { id } = useParams();
+  const { 
+    meetings, addMeeting, addHighlight, addClip, toggleActionItem, 
+    calendarConnected, setCalendarConnected, addCaptureSession 
+  } = useMeetingStore();
+
   const [activeTab, setActiveTab] = useState<'summary' | 'transcript'>('summary');
-  const [selectedMeetingId, setSelectedMeetingId] = useState(mockMeetings[0].id);
-  const [actionItemsState, setActionItemsState] = useState<Record<string, boolean>>({});
   
+  const selectedMeetingId = id || (meetings.length > 0 ? meetings[0].id : '');
+  const selectedMeeting = meetings.find(m => m.id === selectedMeetingId) || meetings[0];
+
   // Capture Simulation State
   const [captureState, setCaptureState] = useState<'idle' | 'joining' | 'recording' | 'processing'>('idle');
   const [captureTarget, setCaptureTarget] = useState<any>(null);
   const [captureTime, setCaptureTime] = useState(0);
 
-  const upcomingMeetings = [
+  const upcomingMeetings = calendarConnected ? [
     { id: 'u1', title: 'Acme Corp — Product Discovery', participants: ['Alex J.', 'Sam T.'], platform: 'Zoom', time: 'Today · 3:00 PM' },
     { id: 'u2', title: 'Northstar — Weekly Sync', participants: ['Team'], platform: 'Google Meet', time: 'Today · 4:30 PM' },
     { id: 'u3', title: 'Vertex — Enterprise Demo', participants: ['Sarah W.', 'Client'], platform: 'Teams', time: 'Tomorrow · 11:00 AM' }
-  ];
+  ] : [];
   
   // Search
   const [searchQuery, setSearchQuery] = useState('');
@@ -37,17 +46,10 @@ export default function AppDashboard() {
   const [settingsModalOpen, setSettingsModalOpen] = useState(false);
   const [highlightNote, setHighlightNote] = useState('');
   const [highlightTitle, setHighlightTitle] = useState('');
+  const [clipTitle, setClipTitle] = useState('');
   
-  // Dynamic Highlights
-  const [localHighlights, setLocalHighlights] = useState<Record<string, any[]>>({});
-
-  const selectedMeeting = mockMeetings.find(m => m.id === selectedMeetingId) || mockMeetings[0];
-
-  const toggleActionItem = (id: string) => {
-    setActionItemsState(prev => ({
-      ...prev,
-      [id]: !prev[id]
-    }));
+  const toggleActionItemLocal = (actionItemId: string) => {
+    if (selectedMeeting) toggleActionItem(selectedMeeting.id, actionItemId);
   };
 
   const formatTime = (seconds: number) => {
@@ -82,6 +84,41 @@ export default function AppDashboard() {
     return () => clearInterval(interval);
   }, [isPlaying, durationSec]);
 
+  const createMeetingFromTemplate = (target: any) => {
+    const template = getTemplateForUpcoming(target.id);
+    const newId = `m-${Date.now()}`;
+    const now = new Date();
+    const timeStr = now.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+    const newMeeting = {
+      ...template,
+      id: newId,
+      title: target.title || template.title,
+      platform: target.platform || template.platform,
+      participants: template.participants,
+      company: template.company,
+      date: 'Today',
+      time: timeStr,
+      recordingState: 'recorded' as const,
+      highlights: [],
+      clips: [],
+      actionItems: template.actionItems.map((a, i) => ({ ...a, id: `${newId}-a${i}`, completed: false }))
+    };
+    addMeeting(newMeeting);
+    
+    addCaptureSession({
+      id: `cs-${Date.now()}`,
+      sourceMeetingId: newId,
+      title: newMeeting.title,
+      platform: newMeeting.platform,
+      participants: newMeeting.participants,
+      startedAt: Date.now() - captureTime * 1000,
+      elapsedSeconds: captureTime,
+      status: 'completed'
+    });
+
+    return newId;
+  };
+
   // Capture Simulation State Machine
   useEffect(() => {
     if (captureState === 'joining') {
@@ -99,9 +136,11 @@ export default function AppDashboard() {
     }
     if (captureState === 'processing') {
       const t = setTimeout(() => {
+        const newId = createMeetingFromTemplate(captureTarget);
         setCaptureState('idle');
-        setSelectedMeetingId(mockMeetings[0].id);
+        setCaptureTarget(null);
         setActiveTab('summary');
+        navigate(`/app/meetings/${newId}`);
       }, 3500);
       return () => clearTimeout(t);
     }
@@ -112,7 +151,7 @@ export default function AppDashboard() {
     if (!searchQuery.trim()) return [];
     const q = searchQuery.toLowerCase();
     const results: any[] = [];
-    mockMeetings.forEach(m => {
+    meetings.forEach(m => {
       let matched = false;
       if (m.title.toLowerCase().includes(q)) matched = true;
       m.transcript.forEach(t => {
@@ -137,7 +176,7 @@ export default function AppDashboard() {
       }
     });
     return results;
-  }, [searchQuery]);
+  }, [searchQuery, meetings]);
 
   const saveHighlight = () => {
     if (!highlightTitle) return;
@@ -147,16 +186,31 @@ export default function AppDashboard() {
       time: formatTime(currentTime),
       note: highlightNote
     };
-    setLocalHighlights(prev => ({
-      ...prev,
-      [selectedMeetingId]: [...(prev[selectedMeetingId] || selectedMeeting.highlights || []), newHighlight]
-    }));
+    if (selectedMeeting) {
+      addHighlight(selectedMeeting.id, newHighlight);
+    }
     setHighlightModalOpen(false);
     setHighlightTitle('');
     setHighlightNote('');
   };
 
-  const meetingHighlights = localHighlights[selectedMeetingId] || selectedMeeting.highlights || [];
+  const generateClip = () => {
+    if (!clipTitle || !selectedMeeting) return;
+    const newClip = {
+      id: Math.random().toString(),
+      title: clipTitle,
+      startTime: formatTime(currentTime),
+      endTime: formatTime(currentTime + 60),
+      createdAt: new Date().toISOString(),
+      shareUrl: `https://fathom.video/clip/${Math.random().toString(36).substring(7)}`
+    };
+    addClip(selectedMeeting.id, newClip);
+    alert(`Clip link generated: ${newClip.shareUrl} (Copied to clipboard)`);
+    setClipModalOpen(false);
+    setClipTitle('');
+  };
+
+  const meetingHighlights = selectedMeeting?.highlights || [];
 
   return (
     <div className="flex h-screen bg-[#0a0a0a] text-white pt-[72px]">
@@ -247,7 +301,7 @@ export default function AppDashboard() {
                   <button
                     key={idx}
                     onClick={() => {
-                      setSelectedMeetingId(res.meetingId);
+                      navigate(`/app/meetings/${res.meetingId}`);
                       setActiveTab('transcript');
                       handleTranscriptClick(res.timeStr);
                     }}
@@ -265,7 +319,18 @@ export default function AppDashboard() {
               <div className="p-4 border-b border-white/10 shrink-0">
                 <h3 className="text-xs font-semibold text-white/40 uppercase tracking-wider mb-3">Upcoming Meetings</h3>
                 <div className="space-y-2">
-                  {upcomingMeetings.map(um => (
+                  {!calendarConnected ? (
+                    <div className="text-center p-4 bg-white/5 border border-white/10 rounded-lg">
+                      <Calendar className="w-6 h-6 text-white/40 mx-auto mb-3" />
+                      <h4 className="text-sm font-semibold text-white mb-1">Connect Calendar</h4>
+                      <p className="text-xs text-white/50 mb-3">Sync your upcoming meetings to capture them.</p>
+                      <button 
+                        onClick={() => setCalendarConnected(true)}
+                        className="bg-white/10 hover:bg-white/20 text-white text-xs font-semibold py-1.5 px-4 rounded transition-colors">
+                        Connect Google Calendar
+                      </button>
+                    </div>
+                  ) : upcomingMeetings.map(um => (
                     <div key={um.id} className="bg-white/5 border border-white/10 rounded-lg p-3">
                       <h4 className="text-sm font-semibold text-white truncate mb-1">{um.title}</h4>
                       <div className="text-xs text-white/50 mb-2">{um.time} • {um.platform}</div>
@@ -281,10 +346,10 @@ export default function AppDashboard() {
               <div className="p-4 flex-1 overflow-y-auto">
                 <h3 className="text-xs font-semibold text-white/40 uppercase tracking-wider mb-3">Past Meetings</h3>
                 <div className="space-y-1 -mx-4">
-                {mockMeetings.map((meeting) => (
+                {meetings.map((meeting) => (
                   <button
                     key={meeting.id}
-                    onClick={() => setSelectedMeetingId(meeting.id)}
+                    onClick={() => navigate(`/app/meetings/${meeting.id}`)}
                     className={cn(
                       "w-full text-left p-4 border-b border-white/5 hover:bg-white/5 transition-colors block",
                       selectedMeetingId === meeting.id ? "bg-white/10 border-l-2 border-l-fathom-cyan" : ""
@@ -465,6 +530,35 @@ export default function AppDashboard() {
                     )}
                   </div>
                 </section>
+
+                <section>
+                  <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+                    <Scissors className="w-5 h-5 text-fathom-pink" /> Clips
+                  </h2>
+                  <div className="bg-[#141414] border border-white/5 rounded-xl overflow-hidden">
+                    {(!selectedMeeting?.clips || selectedMeeting.clips.length === 0) ? (
+                      <div className="p-4 text-sm text-white/40">No clips created yet. Use "Share Clip" to create one.</div>
+                    ) : (
+                      selectedMeeting.clips.map((clip: any, idx: number) => (
+                        <div key={idx} className="p-4 border-b border-white/5 last:border-0">
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="font-semibold text-sm text-white">{clip.title}</span>
+                            <button
+                              onClick={() => { navigator.clipboard.writeText(clip.shareUrl); alert('Link copied: ' + clip.shareUrl); }}
+                              className="flex items-center gap-1 text-xs text-fathom-cyan hover:text-fathom-cyan/80 transition-colors"
+                            >
+                              <LinkIcon className="w-3 h-3" /> Copy link
+                            </button>
+                          </div>
+                          <div className="flex items-center gap-3 text-xs text-white/50">
+                            <span className="font-mono bg-white/5 px-1.5 py-0.5 rounded">{clip.startTime} – {clip.endTime}</span>
+                            <span>Created {new Date(clip.createdAt).toLocaleDateString() === new Date().toLocaleDateString() ? 'just now' : new Date(clip.createdAt).toLocaleDateString()}</span>
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </section>
               </div>
 
               {/* Action Items Column */}
@@ -475,11 +569,11 @@ export default function AppDashboard() {
                     <div className="p-4 text-sm text-white/40">No action items.</div>
                   ) : (
                     selectedMeeting.actionItems.map(item => {
-                      const isCompleted = actionItemsState[item.id] ?? item.completed;
+                      const isCompleted = item.completed;
                       return (
                         <button 
                           key={item.id}
-                          onClick={() => toggleActionItem(item.id)}
+                          onClick={() => toggleActionItemLocal(item.id)}
                           className="w-full flex items-start gap-3 p-4 border-b border-white/5 hover:bg-white/5 transition-colors text-left"
                         >
                           <div className="mt-0.5 shrink-0">
@@ -542,7 +636,7 @@ export default function AppDashboard() {
             <div className="p-4 space-y-4">
               <div>
                 <label className="block text-sm mb-1 text-white/70">Clip Title</label>
-                <input type="text" placeholder="e.g. Pricing Discussion" className="w-full bg-black/50 border border-white/10 rounded px-3 py-2 text-sm focus:outline-none focus:border-fathom-cyan" />
+                <input type="text" value={clipTitle} onChange={e => setClipTitle(e.target.value)} placeholder="e.g. Pricing Discussion" className="w-full bg-black/50 border border-white/10 rounded px-3 py-2 text-sm focus:outline-none focus:border-fathom-cyan" />
               </div>
               <div className="flex gap-4">
                 <div className="flex-1">
@@ -558,10 +652,7 @@ export default function AppDashboard() {
                 <label className="block text-sm mb-1 text-white/70">Send to (Email)</label>
                 <input type="email" placeholder="colleague@company.com" className="w-full bg-black/50 border border-white/10 rounded px-3 py-2 text-sm focus:outline-none focus:border-fathom-cyan" />
               </div>
-              <button onClick={() => {
-                alert('Clip link generated: https://fathom.video/clip/xyz123 (Copied to clipboard)');
-                setClipModalOpen(false);
-              }} className="w-full bg-fathom-cyan text-black font-semibold py-2 rounded mt-2 hover:bg-fathom-cyan/90 transition-colors">
+              <button onClick={generateClip} className="w-full bg-fathom-cyan text-black font-semibold py-2 rounded mt-2 hover:bg-fathom-cyan/90 transition-colors">
                 Generate & Copy Link
               </button>
             </div>

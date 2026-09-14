@@ -31,6 +31,7 @@ function App() {
             <Route path="/login" element={<Auth mode="login" />} />
             <Route path="/signup" element={<Auth mode="signup" />} />
             <Route path="/app" element={<AppDashboard />} />
+            <Route path="/app/meetings/:id" element={<AppDashboard />} />
             <Route path="/app/ask-fathom" element={<AskFathom />} />
           </Routes>
         </main>

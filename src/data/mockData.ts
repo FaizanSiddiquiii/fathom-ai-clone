@@ -6,6 +6,15 @@ export type Highlight = {
   note?: string;
 };
 
+export type Clip = {
+  id: string;
+  title: string;
+  startTime: string;
+  endTime: string;
+  createdAt: string;
+  shareUrl: string;
+};
+
 export type ActionItem = {
   id: string;
   text: string;
@@ -36,6 +45,7 @@ export type Meeting = {
   actionItems: ActionItem[];
   transcript: TranscriptLine[];
   highlights: Highlight[];
+  clips?: Clip[];
 };
 
 export const mockMeetings: Meeting[] = [

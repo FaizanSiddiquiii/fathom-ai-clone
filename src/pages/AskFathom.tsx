@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { Send, Sparkles, Folder, Video, MessageSquare, ChevronLeft, Lightbulb } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { cn } from '../lib/utils';
+import { useMeetingStore } from '../lib/store';
 
 type Message = {
   id: string;
@@ -18,6 +19,7 @@ const SUGGESTED_PROMPTS = [
 ];
 
 export default function AskFathom() {
+  const { meetings } = useMeetingStore();
   const [messages, setMessages] = useState<Message[]>([
     {
       id: '1',
@@ -47,60 +49,100 @@ export default function AskFathom() {
     setIsTyping(true);
     setThinkingPhase('Searching meetings...');
 
-    // Simulate AI thinking phases
     setTimeout(() => setThinkingPhase('Analyzing transcripts...'), 800);
     setTimeout(() => setThinkingPhase('Synthesizing response...'), 1600);
 
-    // Simulate AI responding
     setTimeout(() => {
       setIsTyping(false);
       setThinkingPhase('');
-      
+
       const q = text.toLowerCase();
-      
-      import('../data/mockData').then(({ mockMeetings }) => {
-        let matchedMeetings = mockMeetings.filter(m => 
-          m.title.toLowerCase().includes(q) || 
-          m.summary.toLowerCase().includes(q) || 
-          m.transcript.some(t => t.text.toLowerCase().includes(q))
-        );
+      // Tokenize the question into searchable keywords (3+ chars, skip stop words)
+      const stopWords = new Set(['the','and','was','were','what','when','where','how','did','does','any','about','from','with','that','this','have','been','they','their','there','which','would','could','should','also','just','been','into','some','than']);
+      const tokens = q.split(/\W+/).filter(t => t.length >= 3 && !stopWords.has(t));
 
-        let responseContent = "I couldn't find specific information about that in your recent meetings.";
-        let citations: { meetingId: string; title: string }[] = [];
+      // Score each meeting
+      type ScoredMeeting = { meeting: typeof meetings[0]; score: number; snippets: { speaker: string; time: string; text: string }[] };
+      const scored: ScoredMeeting[] = meetings.map(m => {
+        let score = 0;
+        const snippets: { speaker: string; time: string; text: string }[] = [];
 
-        if (q.includes('q3 roadmap') || q.includes('decide')) {
-           responseContent = "During the Product Sync, the team decided to push the new analytics dashboard to Q4 in order to prioritize the SSO integration for enterprise clients in Q3. David is updating the Jira epics accordingly.";
-           citations = [{ meetingId: 'm-2', title: 'Product Sync: Q3 Roadmap Planning' }];
-        } else if (q.includes('acme') || q.includes('feedback')) {
-           responseContent = "Acme Corp was generally positive but had two main points of feedback:\n1. They need tighter integrations with Salesforce.\n2. The onboarding process feels a bit manual and they requested more automated templates.\nEmily is drafting a custom proposal to address these.";
-           citations = [{ meetingId: 'm-large', title: 'Acme Corp — Product Discovery & Enterprise Rollout' }];
-        } else if (q.includes('budget') || q.includes('constraint')) {
-           responseContent = "Yes, in the Acme Corp meeting, they mentioned that their Q3 budget is locked, meaning any new enterprise software purchases must be deferred to Q4 or require special CFO approval if it exceeds $50k.";
-           citations = [{ meetingId: 'm-large', title: 'Acme Corp — Product Discovery & Enterprise Rollout' }];
-        } else if (q.includes('sarah') || q.includes('action items')) {
-           responseContent = "Sarah has the following open action items from recent meetings:\n- Send the updated pricing sheet to the Acme Corp procurement team.\n- Schedule a follow-up technical deep dive with Northstar's engineering lead.\n- Finalize the Q3 marketing budget allocation by Thursday.";
-           citations = [
-             { meetingId: 'm-large', title: 'Acme Corp — Product Discovery & Enterprise Rollout' },
-             { meetingId: 'm-3', title: 'Marketing Weekly Sync' }
-           ];
-        } else if (q.includes('pricing') || q.includes('objection')) {
-           responseContent = "In the Acme Corp Product Discovery meeting, Emily raised concerns about the enterprise tier pricing for 500 seats. Alex agreed to provide a custom proposal by Friday.";
-           citations = [{ meetingId: 'm-large', title: 'Acme Corp — Product Discovery & Enterprise Rollout' }];
-        } else if (matchedMeetings.length > 0) {
-           const topMatch = matchedMeetings[0];
-           responseContent = `Based on your meetings, I found relevant information in "${topMatch.title}".\n\nContext: ${topMatch.summary.substring(0, 150)}...`;
-           citations = matchedMeetings.slice(0, 3).map(m => ({ meetingId: m.id, title: m.title }));
+        for (const token of tokens) {
+          if (m.title.toLowerCase().includes(token)) score += 5;
+          if (m.company?.toLowerCase().includes(token)) score += 4;
+          if (m.summary.toLowerCase().includes(token)) score += 3;
+          for (const kp of m.keyPoints) {
+            if (kp.toLowerCase().includes(token)) score += 2;
+          }
+          for (const line of m.transcript) {
+            if (line.text.toLowerCase().includes(token)) {
+              score += 1;
+              if (snippets.length < 3 && !snippets.find(s => s.time === line.time)) {
+                snippets.push(line);
+              }
+            }
+          }
+          for (const ai of m.actionItems) {
+            if (ai.text.toLowerCase().includes(token)) score += 2;
+          }
+        }
+        return { meeting: m, score, snippets };
+      }).filter(s => s.score > 0).sort((a, b) => b.score - a.score);
+
+      let responseContent: string;
+      let citations: { meetingId: string; title: string }[] = [];
+
+      if (scored.length === 0) {
+        responseContent = "I couldn't find specific information about that in your recent meetings. Try searching for a topic, person, or company name.";
+      } else {
+        const top = scored[0];
+        const m = top.meeting;
+        citations = scored.slice(0, 3).map(s => ({ meetingId: s.meeting.id, title: s.meeting.title }));
+
+        // Build a contextual answer from the best match
+        const parts: string[] = [];
+        parts.push(`Based on the "${m.title}" meeting${m.company ? ` with ${m.company}` : ''}:\n`);
+
+        // Add relevant key points
+        const relevantKPs = m.keyPoints.filter(kp => tokens.some(t => kp.toLowerCase().includes(t)));
+        if (relevantKPs.length > 0) {
+          parts.push('Key points discussed:');
+          relevantKPs.forEach(kp => parts.push(`• ${kp}`));
         }
 
-        const aiMessage: Message = {
-          id: (Date.now() + 1).toString(),
-          role: 'ai',
-          content: responseContent,
-          citations: citations.length > 0 ? citations : undefined
-        };
-        
-        setMessages(prev => [...prev, aiMessage]);
-      });
+        // Add relevant transcript snippets
+        if (top.snippets.length > 0) {
+          parts.push('\nRelevant excerpts from the transcript:');
+          top.snippets.slice(0, 2).forEach(s => {
+            parts.push(`[${s.time}] ${s.speaker}: "${s.text}"`);
+          });
+        }
+
+        // Add relevant action items
+        const relevantActions = m.actionItems.filter(ai => tokens.some(t => ai.text.toLowerCase().includes(t)));
+        if (relevantActions.length > 0) {
+          parts.push('\nRelated action items:');
+          relevantActions.forEach(ai => {
+            parts.push(`${ai.completed ? '✅' : '⬜'} ${ai.text}${ai.assignee ? ` (${ai.assignee})` : ''}`);
+          });
+        }
+
+        // If we had multiple high-scoring meetings, mention others
+        if (scored.length > 1 && scored[1].score > 2) {
+          parts.push(`\nThis topic was also discussed in "${scored[1].meeting.title}".`);
+        }
+
+        responseContent = parts.join('\n');
+      }
+
+      const aiMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        role: 'ai',
+        content: responseContent,
+        citations: citations.length > 0 ? citations : undefined
+      };
+
+      setMessages(prev => [...prev, aiMessage]);
     }, 2400);
   };
 
@@ -178,7 +220,7 @@ export default function AskFathom() {
                       <p className="text-xs text-white/40 font-medium mb-2 uppercase tracking-wider">Sources</p>
                       <div className="flex flex-col gap-2">
                         {msg.citations.map((cit, i) => (
-                          <Link key={i} to="/app" className="flex items-center gap-2 text-xs bg-white/5 hover:bg-white/10 p-2 rounded-md transition-colors border border-white/5">
+                          <Link key={i} to={`/app/meetings/${cit.meetingId}`} className="flex items-center gap-2 text-xs bg-white/5 hover:bg-white/10 p-2 rounded-md transition-colors border border-white/5">
                             <Video className="w-3 h-3 text-fathom-cyan" />
                             <span className="text-white/80">{cit.title}</span>
                           </Link>
